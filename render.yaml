@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: birja-ai
+    runtime: docker
+    plan: starter        # bepul "free" reja ham ishlaydi, lekin 512 MB RAM yetmasligi mumkin
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false      # Render panelida qo'lda kiritiladi
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash

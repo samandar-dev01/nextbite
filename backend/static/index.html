@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birja AI — Bitimlar tahlili</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#070a16; --bg2:#0c1124; --card:#111731; --card2:#161d3f; --line:#222a55;
+  --text:#eef1ff; --muted:#8f99cf; --accent:#34e58a; --accent2:#5b8cff; --violet:#9b6bff;
+  --warn:#ffb454; --danger:#ff6b81;
+  --grad:linear-gradient(135deg,#5b8cff 0%,#9b6bff 55%,#34e58a 120%);
+}
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  margin:0; font-family:'Inter',system-ui,sans-serif; color:var(--text); background:var(--bg);
+  background-image:radial-gradient(900px 500px at 10% -10%,rgba(91,140,255,.18),transparent 60%),
+                   radial-gradient(800px 500px at 100% 0%,rgba(155,107,255,.14),transparent 60%);
+  background-attachment:fixed; min-height:100vh;
+}
+.wrap { max-width:1280px; margin:0 auto; padding:0 24px; }
+
+/* ---------- header ---------- */
+header { position:sticky; top:0; z-index:50; backdrop-filter:blur(14px); background:rgba(7,10,22,.72); border-bottom:1px solid var(--line); }
+.bar { display:flex; align-items:center; gap:18px; height:66px; }
+.logo { display:flex; align-items:center; gap:10px; font-weight:800; font-size:20px; letter-spacing:-.3px; }
+.logo i { width:34px; height:34px; border-radius:10px; background:var(--grad); display:grid; place-items:center; font-style:normal; font-size:18px; box-shadow:0 6px 20px rgba(91,140,255,.45); }
+.logo small { display:block; font-weight:500; font-size:11px; color:var(--muted); letter-spacing:0; margin-top:-2px; }
+nav { display:flex; gap:6px; margin-left:20px; }
+nav button { background:none; border:0; color:var(--muted); font:600 14px Inter,sans-serif; padding:9px 16px; border-radius:10px; cursor:pointer; transition:.2s; }
+nav button:hover { color:var(--text); background:var(--card); }
+nav button.active { color:#fff; background:var(--card2); box-shadow:inset 0 0 0 1px var(--line); }
+.spacer { flex:1; }
+.pill { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); background:var(--card); border:1px solid var(--line); padding:7px 12px; border-radius:99px; }
+.dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 10px var(--accent); }
+.dot.off { background:var(--danger); box-shadow:0 0 10px var(--danger); }
+select.year { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:9px 12px; font:600 13px Inter,sans-serif; cursor:pointer; }
+
+/* ---------- hero ---------- */
+.hero { padding:34px 0 8px; display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+.hero h1 { margin:0; font-size:34px; letter-spacing:-.8px; font-weight:800; }
+.hero h1 span { background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.hero p { margin:8px 0 0; color:var(--muted); max-width:640px; line-height:1.55; }
+.note { font-size:12px; color:var(--muted); }
+
+/* ---------- cards ---------- */
+.grid { display:grid; gap:16px; }
+.kpis { grid-template-columns:repeat(4,1fr); margin:22px 0 16px; }
+.card { background:linear-gradient(180deg,var(--card),var(--bg2)); border:1px solid var(--line); border-radius:18px; padding:20px; position:relative; overflow:hidden; }
+.card h2 { margin:0 0 4px; font-size:15px; font-weight:700; }
+.card .sub { color:var(--muted); font-size:12px; margin-bottom:14px; }
+.kpi .lbl { color:var(--muted); font-size:12.5px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; }
+.kpi .num { font-size:30px; font-weight:800; margin:8px 0 4px; letter-spacing:-.8px; }
+.kpi .meta { font-size:12.5px; color:var(--muted); }
+.kpi::after { content:""; position:absolute; right:-30px; top:-30px; width:110px; height:110px; border-radius:50%; background:var(--c,#5b8cff); opacity:.14; filter:blur(8px); }
+.kpi:nth-child(1){--c:#5b8cff} .kpi:nth-child(2){--c:#34e58a} .kpi:nth-child(3){--c:#9b6bff} .kpi:nth-child(4){--c:#ffb454}
+.row2 { grid-template-columns:1.4fr 1fr; margin-bottom:16px; }
+.row3 { grid-template-columns:1fr 1fr 1fr; margin-bottom:16px; }
+.row2b { grid-template-columns:1fr 1fr; margin-bottom:16px; }
+.chart-box { position:relative; height:290px; }
+.chart-box.tall { height:340px; }
+
+/* ---------- tables ---------- */
+.tbl { width:100%; border-collapse:collapse; font-size:13.5px; }
+.tbl th { text-align:left; color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.5px; padding:8px 8px; border-bottom:1px solid var(--line); }
+.tbl td { padding:10px 8px; border-bottom:1px solid rgba(34,42,85,.55); }
+.tbl tr:last-child td { border-bottom:0; }
+.tbl .r { text-align:right; font-variant-numeric:tabular-nums; }
+.tbl .rank { width:28px; color:var(--muted); font-weight:700; }
+.tbl .name { max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bar-cell { position:relative; }
+.bar-cell i { position:absolute; left:0; bottom:0; height:2px; background:var(--grad); border-radius:2px; }
+
+/* ---------- tabs ---------- */
+.view { display:none; padding-bottom:50px; }
+.view.active { display:block; animation:fade .35s ease; }
+@keyframes fade { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+.seg { display:inline-flex; background:var(--bg2); border:1px solid var(--line); border-radius:10px; padding:3px; gap:2px; }
+.seg button { background:none; border:0; color:var(--muted); font:600 12px Inter,sans-serif; padding:6px 11px; border-radius:7px; cursor:pointer; }
+.seg button.active { background:var(--card2); color:#fff; }
+.card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+
+/* ---------- chat ---------- */
+.chat-layout { display:grid; grid-template-columns:300px 1fr; gap:16px; margin-top:24px; align-items:start; }
+.side .card { padding:18px; }
+.side h3 { margin:0 0 12px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; }
+.chip { display:block; width:100%; text-align:left; background:var(--bg2); border:1px solid var(--line); color:var(--text); font:500 13px/1.4 Inter,sans-serif; padding:10px 12px; border-radius:12px; margin-bottom:8px; cursor:pointer; transition:.2s; }
+.chip:hover { border-color:var(--accent2); background:var(--card2); transform:translateX(2px); }
+.chat-card { padding:0; display:flex; flex-direction:column; height:calc(100vh - 190px); min-height:520px; }
+.chat-top { display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); }
+.avatar { width:38px; height:38px; border-radius:12px; background:var(--grad); display:grid; place-items:center; font-size:19px; flex:none; }
+.chat-top b { display:block; font-size:15px; }
+.chat-top span { font-size:12px; color:var(--muted); }
+#chat-log { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:16px; scroll-behavior:smooth; }
+.msg { display:flex; gap:10px; max-width:92%; }
+.msg.user { align-self:flex-end; flex-direction:row-reverse; }
+.bubble { padding:12px 16px; border-radius:16px; line-height:1.6; font-size:14.5px; overflow-wrap:anywhere; }
+.msg.user .bubble { background:linear-gradient(135deg,#4a6fe0,#7a56e8); border-bottom-right-radius:4px; white-space:pre-wrap; }
+.msg.bot .bubble { background:var(--card2); border:1px solid var(--line); border-bottom-left-radius:4px; min-width:0; }
+.msg.bot .avatar { width:30px; height:30px; font-size:15px; border-radius:10px; }
+.bubble p { margin:0 0 10px; } .bubble p:last-child { margin:0; }
+.bubble h3, .bubble h4 { margin:14px 0 8px; font-size:15px; }
+.bubble ul, .bubble ol { margin:6px 0 10px; padding-left:22px; }
+.bubble li { margin:3px 0; }
+.bubble strong { color:#fff; }
+.bubble code { background:var(--bg); padding:2px 6px; border-radius:6px; font-size:12.5px; }
+.bubble .tw { overflow-x:auto; margin:8px 0 12px; border:1px solid var(--line); border-radius:12px; }
+.bubble table { border-collapse:collapse; width:100%; font-size:13px; }
+.bubble th { background:rgba(91,140,255,.12); text-align:left; padding:8px 12px; font-size:12px; white-space:nowrap; }
+.bubble td { padding:8px 12px; border-top:1px solid var(--line); }
+.src { margin-top:12px; border-top:1px dashed var(--line); padding-top:10px; }
+.src summary { cursor:pointer; color:var(--muted); font-size:12.5px; font-weight:600; user-select:none; }
+.src summary:hover { color:var(--text); }
+.src .inner { margin-top:10px; }
+.src .tw { max-height:260px; overflow:auto; }
+.mini-chart { position:relative; height:220px; margin:10px 0 4px; }
+.typing { display:flex; gap:5px; padding:6px 2px; }
+.typing i { width:8px; height:8px; border-radius:50%; background:var(--muted); animation:b 1.2s infinite; }
+.typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+@keyframes b { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-6px);opacity:1} }
+.status-line { font-size:12.5px; color:var(--muted); margin-top:6px; }
+.err { color:var(--danger); }
+#chat-form { display:flex; gap:10px; padding:14px 16px; border-top:1px solid var(--line); background:rgba(7,10,22,.4); }
+#q { flex:1; background:var(--bg2); border:1px solid var(--line); color:var(--text); border-radius:14px; padding:13px 16px; font:500 15px Inter,sans-serif; outline:none; transition:.2s; }
+#q:focus { border-color:var(--accent2); box-shadow:0 0 0 3px rgba(91,140,255,.2); }
+#lang { background:var(--bg2); border:1px solid var(--line); color:var(--text); border-radius:14px; padding:0 12px; font:600 13px Inter,sans-serif; }
+#send { background:var(--grad); border:0; color:#fff; font:700 14px Inter,sans-serif; padding:0 22px; border-radius:14px; cursor:pointer; transition:.2s; }
+#send:hover { filter:brightness(1.1); transform:translateY(-1px); }
+#send:disabled { opacity:.5; cursor:wait; transform:none; }
+.clear { background:none; border:1px solid var(--line); color:var(--muted); border-radius:10px; padding:6px 12px; font:600 12px Inter,sans-serif; cursor:pointer; margin-left:auto; }
+.clear:hover { color:var(--text); }
+
+.skeleton { background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%); background-size:200% 100%; animation:sk 1.4s infinite; color:transparent !important; border-radius:8px; }
+@keyframes sk { to { background-position:-200% 0; } }
+footer { text-align:center; color:var(--muted); font-size:12px; padding:30px 0 40px; }
+
+@media (max-width:1000px) {
+  .kpis { grid-template-columns:repeat(2,1fr); }
+  .row2,.row3,.row2b { grid-template-columns:1fr; }
+  .chat-layout { grid-template-columns:1fr; }
+  .chat-card { height:70vh; }
+  .pill { display:none; }
+}
+@media (max-width:560px) {
+  .kpis { grid-template-columns:1fr; } .hero h1 { font-size:26px; } nav { margin-left:0; }
+  .logo small { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <div class="logo"><i>📈</i><div>Birja AI<small>Bitimlar tahlili</small></div></div>
+    <nav>
+      <button class="active" data-view="dash">Dashboard</button>
+      <button data-view="chat">AI yordamchi</button>
+    </nav>
+    <div class="spacer"></div>
+    <select class="year" id="year" title="Yil bo'yicha filtr">
+      <option value="">Barcha yillar</option>
+      <option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option>
+    </select>
+    <div class="pill"><span class="dot" id="health-dot"></span><span id="health-text">Tekshirilmoqda…</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ================= DASHBOARD ================= -->
+<section class="view active" id="view-dash">
+  <div class="hero">
+    <div>
+      <h1>O'zbekiston birjasi <span>bitimlar tahlili</span></h1>
+      <p>2022–2026 yillardagi 500 000 ta bitim bo'yicha jonli statistika. Pastdagi <b>AI yordamchi</b>dan istalgan savolni so'rang — javob faqat haqiqiy ma'lumotlardan olinadi.</p>
+    </div>
+    <div class="note" id="scope-note">Summalar bekor qilingan bitimlarsiz · USD — bitim kunidagi kurs bo'yicha</div>
+  </div>
+
+  <div class="grid kpis">
+    <div class="card kpi"><div class="lbl">Jami savdo hajmi</div><div class="num skeleton" id="k-usd">0000</div><div class="meta" id="k-uzs">&nbsp;</div></div>
+    <div class="card kpi"><div class="lbl">Bitimlar soni</div><div class="num skeleton" id="k-deals">0000</div><div class="meta" id="k-avg">&nbsp;</div></div>
+    <div class="card kpi"><div class="lbl">Ishtirokchilar</div><div class="num skeleton" id="k-parts">0000</div><div class="meta" id="k-parts-meta">&nbsp;</div></div>
+    <div class="card kpi"><div class="lbl">Bekor qilingan</div><div class="num skeleton" id="k-cancel">0000</div><div class="meta" id="k-cancel-meta">&nbsp;</div></div>
+  </div>
+
+  <div class="grid row2">
+    <div class="card">
+      <div class="card-head">
+        <div><h2 id="trend-title">Oyma-oy dinamika</h2><div class="sub">Savdo hajmi (mln USD) va bitimlar soni</div></div>
+      </div>
+      <div class="chart-box tall"><canvas id="c-monthly"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Yillar bo'yicha o'sish</h2><div class="sub">Savdo hajmi (mlrd USD)</div>
+      <div class="chart-box tall"><canvas id="c-yearly"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid row2b">
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Hududlar kesimida</h2><div class="sub">Savdo hajmi bo'yicha eng yirik hududlar</div></div>
+      </div>
+      <div class="chart-box tall"><canvas id="c-region"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div><h2 id="mix-title">Mahsulot toifalari</h2><div class="sub">Ulush (savdo hajmi bo'yicha)</div></div>
+        <div class="seg" id="mix-seg">
+          <button class="active" data-by="category">Toifa</button>
+          <button data-by="trade_type">Savdo turi</button>
+          <button data-by="contract_type">Ichki / eksport</button>
+        </div>
+      </div>
+      <div class="chart-box tall"><canvas id="c-mix"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid row2b">
+    <div class="card">
+      <h2>Top mahsulotlar</h2><div class="sub">Savdo hajmi bo'yicha</div>
+      <table class="tbl"><thead><tr><th>#</th><th>Mahsulot</th><th class="r">Bitim</th><th class="r">Hajm, USD</th></tr></thead><tbody id="t-products"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Top kompaniyalar</h2><div class="sub">Savdo hajmi bo'yicha</div></div>
+        <div class="seg" id="co-seg"><button class="active" data-side="seller">Sotuvchilar</button><button data-side="buyer">Xaridorlar</button></div>
+      </div>
+      <table class="tbl"><thead><tr><th>#</th><th>Kompaniya</th><th class="r">Bitim</th><th class="r">Hajm, USD</th></tr></thead><tbody id="t-companies"></tbody></table>
+    </div>
+  </div>
+
+  <div class="grid row2b">
+    <div class="card">
+      <h2>Top brokerlar</h2><div class="sub">Sotuvchi tomondagi brokerlar, savdo hajmi bo'yicha</div>
+      <table class="tbl"><thead><tr><th>#</th><th>Broker</th><th class="r">Bitim</th><th class="r">Hajm, USD</th></tr></thead><tbody id="t-brokers"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>Bitim holatlari</h2><div class="sub">Barcha bitimlar (bekor qilinganlar bilan)</div>
+      <table class="tbl"><thead><tr><th>Holat</th><th class="r">Soni</th><th class="r">Ulushi</th></tr></thead><tbody id="t-status"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CHAT ================= -->
+<section class="view" id="view-chat">
+  <div class="chat-layout">
+    <aside class="side">
+      <div class="card">
+        <h3>Savol namunalari</h3>
+        <button class="chip">2025-yilda eng ko'p savdo hajmiga ega 5 ta hudud qaysilar?</button>
+        <button class="chip">Paxta (хлопок) savdosi yillar bo'yicha qanday o'zgargan?</button>
+        <button class="chip">2024 va 2025 yillarni savdo hajmi bo'yicha solishtir</button>
+        <button class="chip">Eng faol 10 ta broker va ularning ulushi</button>
+        <button class="chip">Eksport bitimlari qaysi mahsulotlar bo'yicha ko'p?</button>
+        <button class="chip">Bekor qilingan bitimlar yillar bo'yicha qancha?</button>
+        <button class="chip">Какие регионы лидируют по объему торгов в 2026 году?</button>
+        <button class="chip">Toshkent shahridagi eng yirik xaridorlar kimlar?</button>
+      </div>
+    </aside>
+
+    <div class="card chat-card">
+      <div class="chat-top">
+        <div class="avatar">🤖</div>
+        <div><b>Birja AI yordamchisi</b><span>Ma'lumotlar bazasi asosida javob beradi · jadval va grafiklar bilan</span></div>
+        <button class="clear" id="clear">Tozalash</button>
+      </div>
+      <div id="chat-log"></div>
+      <form id="chat-form">
+        <input id="q" type="text" maxlength="1000" autocomplete="off" placeholder="Savolingizni yozing… masalan: 2025-yilda eng yirik 5 ta sotuvchi kim?" required>
+        <select id="lang" title="Javob tili">
+          <option value="auto">Auto</option><option value="uz">O'zbek</option><option value="ru">Русский</option><option value="en">English</option>
+        </select>
+        <button id="send" type="submit">Yuborish ➤</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>Birja AI · FastAPI + DuckDB + Gemini · Ma'lumotlar: 2022-01-03 … 2026-10-30</footer>
+</div>
+
+<script>
+/* ============ yordamchi funksiyalar ============ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const nf = n => (n ?? 0).toLocaleString('ru-RU');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function compact(n, suffix = '') {
+  n = Number(n || 0);
+  const a = Math.abs(n);
+  const f = (v, u) => v.toLocaleString('ru-RU', {maximumFractionDigits: 1}) + ' ' + u + suffix;
+  if (a >= 1e12) return f(n / 1e12, 'trln');
+  if (a >= 1e9)  return f(n / 1e9, 'mlrd');
+  if (a >= 1e6)  return f(n / 1e6, 'mln');
+  if (a >= 1e3)  return f(n / 1e3, 'ming');
+  return n.toLocaleString('ru-RU') + (suffix ? ' ' + suffix : '');
+}
+
+async function api(url, opts) {
+  const res = await fetch(url, opts);
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.detail || ('Xatolik ' + res.status));
+  return json.data ?? json;
+}
+
+const MONTHS = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'];
+const PALETTE = ['#5b8cff','#34e58a','#9b6bff','#ffb454','#ff6b81','#22d3ee','#f472b6','#a3e635','#fb923c','#94a3b8'];
+
+Chart.defaults.color = '#8f99cf';
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.borderColor = 'rgba(34,42,85,.6)';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.tooltip.backgroundColor = '#0c1124';
+Chart.defaults.plugins.tooltip.borderColor = '#222a55';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.padding = 10;
+
+const charts = {};
+function draw(id, config) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), config);
+}
+function gradient(ctx, c1, c2) {
+  const g = ctx.createLinearGradient(0, 0, 0, 320);
+  g.addColorStop(0, c1); g.addColorStop(1, c2);
+  return g;
+}
+
+/* ============ navigatsiya ============ */
+$$('nav button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+function showView(v) {
+  $$('nav button').forEach(x => x.classList.toggle('active', x.dataset.view === v));
+  $$('.view').forEach(x => x.classList.toggle('active', x.id === 'view-' + v));
+  window.scrollTo({top: 0});
+  if (v === 'chat') setTimeout(() => $('#q').focus(), 100);
+}
+
+/* ============ dashboard ============ */
+let state = {year: '', mixBy: 'category', side: 'seller'};
+const yq = (extra = '') => {
+  const p = new URLSearchParams(extra);
+  if (state.year) p.set('year', state.year);
+  const s = p.toString();
+  return s ? '?' + s : '';
+};
+
+function setKpi(id, text) { const el = $(id); el.textContent = text; el.classList.remove('skeleton'); }
+
+function rankedRows(tbody, rows, nameKey) {
+  const max = Math.max(...rows.map(r => r.total_amount_usd || 0), 1);
+  $(tbody).innerHTML = rows.map((r, i) => `
+    <tr>
+      <td class="rank">${i + 1}</td>
+      <td class="name bar-cell" title="${esc(r[nameKey])}">${esc(r[nameKey] ?? '—')}<i style="width:${(r.total_amount_usd / max * 100).toFixed(0)}%"></i></td>
+      <td class="r">${nf(r.deals_count)}</td>
+      <td class="r"><b>${compact(r.total_amount_usd)}</b></td>
+    </tr>`).join('');
+}
+
+async function loadKpis() {
+  const d = await api('/api/dashboard/summary' + yq());
+  setKpi('#k-usd', compact(d.total_amount_usd, '$'));
+  $('#k-uzs').textContent = '≈ ' + compact(d.total_amount_uzs, "so'm");
+  setKpi('#k-deals', nf(d.deals_count));
+  $('#k-avg').textContent = "O'rtacha bitim: " + compact(d.avg_amount_usd, '$');
+  setKpi('#k-parts', nf(d.unique_sellers + d.unique_buyers));
+  $('#k-parts-meta').textContent = `${nf(d.unique_sellers)} sotuvchi · ${nf(d.unique_buyers)} xaridor`;
+  setKpi('#k-cancel', d.cancel_rate_pct.toLocaleString('ru-RU') + '%');
+  $('#k-cancel-meta').textContent = `${nf(d.cancelled_deals)} ta / ${nf(d.all_deals)} bitim`;
+}
+
+async function loadMonthly() {
+  const rows = await api('/api/dashboard/monthly' + yq());
+  const labels = rows.map(r => state.year ? MONTHS[r.month - 1] : `${MONTHS[r.month - 1]} ${String(r.year).slice(2)}`);
+  $('#trend-title').textContent = state.year ? `${state.year}-yil: oyma-oy dinamika` : 'Oyma-oy dinamika (2022–2026)';
+  const ctx = document.getElementById('c-monthly').getContext('2d');
+  draw('c-monthly', {
+    data: {
+      labels,
+      datasets: [
+        {type: 'line', label: 'Savdo hajmi, mln $', data: rows.map(r => +(r.total_amount_usd / 1e6).toFixed(1)),
+         borderColor: '#34e58a', backgroundColor: gradient(ctx, 'rgba(52,229,138,.35)', 'rgba(52,229,138,0)'),
+         fill: true, tension: .35, pointRadius: 0, pointHoverRadius: 5, borderWidth: 2.5, yAxisID: 'y'},
+        {type: 'bar', label: 'Bitimlar soni', data: rows.map(r => r.deals_count),
+         backgroundColor: 'rgba(91,140,255,.45)', borderRadius: 4, yAxisID: 'y1'},
+      ]
+    },
+    options: {
+      maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+      scales: {
+        x: {grid: {display: false}, ticks: {maxTicksLimit: 14}},
+        y: {position: 'left', ticks: {callback: v => v + ' mln'}},
+        y1: {position: 'right', grid: {display: false}, ticks: {callback: v => nf(v)}},
+      }
+    }
+  });
+}
+
+async function loadYearly() {
+  const rows = await api('/api/dashboard/yearly');
+  const ctx = document.getElementById('c-yearly').getContext('2d');
+  draw('c-yearly', {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => String(r.year)),
+      datasets: [{label: 'mlrd $', data: rows.map(r => +(r.total_amount_usd / 1e9).toFixed(2)),
+        backgroundColor: rows.map(r => state.year && +state.year === r.year ? '#34e58a' : gradient(ctx, '#7a9bff', '#4a3fd0')),
+        borderRadius: 10, maxBarThickness: 56}]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => ` ${c.parsed.y} mlrd $ · ${nf(rows[c.dataIndex].deals_count)} bitim`}}},
+      scales: {x: {grid: {display: false}}, y: {ticks: {callback: v => v + ' mlrd'}}}
+    }
+  });
+  if (rows.some(r => r.year === 2026))
+    $('#scope-note').textContent = "2026-yil ma'lumoti 30-oktabrgacha · bekor qilingan bitimlarsiz · USD — bitim kunidagi kurs";
+}
+
+async function loadRegions() {
+  const rows = await api('/api/dashboard/breakdown' + yq('by=region&limit=10'));
+  draw('c-region', {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => (r.region || '—').replace(' viloyati', '').replace(' shahri', ' sh.')),
+      datasets: [{label: 'mln $', data: rows.map(r => +(r.total_amount_usd / 1e6).toFixed(1)),
+        backgroundColor: PALETTE[0], borderRadius: 8, barThickness: 18}]
+    },
+    options: {
+      indexAxis: 'y', maintainAspectRatio: false,
+      plugins: {legend: {display: false}, tooltip: {callbacks: {label: c => ` ${nf(c.parsed.x)} mln $ · ${nf(rows[c.dataIndex].deals_count)} bitim`}}},
+      scales: {y: {grid: {display: false}}, x: {ticks: {callback: v => nf(v)}}}
+    }
+  });
+}
+
+const MIX_TITLES = {category: 'Mahsulot toifalari', trade_type: 'Savdo turlari', contract_type: 'Ichki va eksport savdo'};
+async function loadMix() {
+  $('#mix-title').textContent = MIX_TITLES[state.mixBy];
+  const rows = await api('/api/dashboard/breakdown' + yq(`by=${state.mixBy}&limit=8`));
+  draw('c-mix', {
+    type: 'doughnut',
+    data: {
+      labels: rows.map(r => r[state.mixBy] || '—'),
+      datasets: [{data: rows.map(r => r.total_amount_usd), backgroundColor: PALETTE, borderColor: '#0c1124', borderWidth: 3, hoverOffset: 8}]
+    },
+    options: {
+      maintainAspectRatio: false, cutout: '62%',
+      plugins: {legend: {position: 'right', labels: {boxWidth: 8, padding: 12, font: {size: 12}}},
+        tooltip: {callbacks: {label: c => {
+          const tot = c.dataset.data.reduce((a, b) => a + b, 0);
+          return ` ${compact(c.parsed, '$')} · ${(c.parsed / tot * 100).toFixed(1)}%`;
+        }}}}
+    }
+  });
+}
+
+async function loadTables() {
+  const [prod, comp, brok, stat] = await Promise.all([
+    api('/api/dashboard/breakdown' + yq('by=product&limit=8')),
+    api('/api/dashboard/top-companies' + yq(`side=${state.side}&limit=8`)),
+    api('/api/dashboard/top-brokers' + yq('limit=8')),
+    api('/api/dashboard/breakdown' + yq('by=status&limit=12')),
+  ]);
+  rankedRows('#t-products', prod, 'product');
+  rankedRows('#t-companies', comp, state.side + '_name');
+  rankedRows('#t-brokers', brok, 'seller_broker_name');
+  const total = stat.reduce((a, r) => a + r.deals_count, 0);
+  $('#t-status').innerHTML = stat.map(r => `
+    <tr><td>${esc(r.status)}</td><td class="r">${nf(r.deals_count)}</td>
+    <td class="r">${(r.deals_count / total * 100).toFixed(1)}%</td></tr>`).join('');
+}
+
+async function loadDashboard() {
+  const jobs = [loadKpis, loadMonthly, loadYearly, loadRegions, loadMix, loadTables];
+  await Promise.all(jobs.map(j => j().catch(e => console.error(j.name, e))));
+}
+
+$('#year').addEventListener('change', e => { state.year = e.target.value; loadDashboard(); });
+$('#mix-seg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $$('#mix-seg button').forEach(x => x.classList.toggle('active', x === b));
+  state.mixBy = b.dataset.by; loadMix();
+});
+$('#co-seg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $$('#co-seg button').forEach(x => x.classList.toggle('active', x === b));
+  state.side = b.dataset.side; loadTables();
+});
+
+async function checkHealth() {
+  try {
+    await api('/api/health');
+    $('#health-text').textContent = 'Server ishlayapti';
+  } catch {
+    $('#health-dot').classList.add('off');
+    $('#health-text').textContent = 'Server bilan aloqa yo‘q';
+  }
+}
+
+/* ============ markdown (xavfsiz, oddiy) ============ */
+function inline(s) {
+  return esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+}
+function markdown(src) {
+  const lines = String(src).replace(/\r/g, '').split('\n');
+  let out = '', i = 0, list = null;
+  const closeList = () => { if (list) { out += `</${list}>`; list = null; } };
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^\s*\|.*\|\s*$/.test(line) && /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(lines[i + 1] || '')) {
+      closeList();
+      const cells = l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const head = cells(line); i += 2;
+      let body = '';
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
+        body += '<tr>' + cells(lines[i]).map(c => `<td>${inline(c)}</td>`).join('') + '</tr>'; i++;
+      }
+      out += `<div class="tw"><table><thead><tr>${head.map(h => `<th>${inline(h)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+      continue;
+    }
+    let m;
+    if ((m = line.match(/^(#{1,4})\s+(.*)/))) { closeList(); out += `<h4>${inline(m[2])}</h4>`; }
+    else if ((m = line.match(/^\s*[-*•]\s+(.*)/))) { if (list !== 'ul') { closeList(); out += '<ul>'; list = 'ul'; } out += `<li>${inline(m[1])}</li>`; }
+    else if ((m = line.match(/^\s*\d+[.)]\s+(.*)/))) { if (list !== 'ol') { closeList(); out += '<ol>'; list = 'ol'; } out += `<li>${inline(m[1])}</li>`; }
+    else if (!line.trim()) { closeList(); }
+    else { closeList(); out += `<p>${inline(line)}</p>`; }
+    i++;
+  }
+  closeList();
+  return out;
+}
+
+/* ============ chat ============ */
+const log = $('#chat-log');
+let history = [];
+let chatCharts = 0;
+
+function scrollDown() { log.scrollTop = log.scrollHeight; }
+
+function addUser(text) {
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.innerHTML = `<div class="bubble">${esc(text)}</div>`;
+  log.appendChild(d); scrollDown();
+}
+
+function addBot(html, extra = '') {
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  d.innerHTML = `<div class="avatar">🤖</div><div class="bubble">${html}${extra}</div>`;
+  log.appendChild(d); scrollDown();
+  return d;
+}
+
+function fmtCell(k, v) {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'number') return /usd|uzs|amount/.test(k) ? nf(Math.round(v)) : nf(v);
+  if (typeof v === 'object') return esc(JSON.stringify(v));
+  return esc(v);
+}
+
+function sourceTable(rows) {
+  if (!rows || !rows.length) return '';
+  const keys = [...new Set(rows.flatMap(r => Object.keys(r)))].filter(k => typeof rows[0][k] !== 'object' || rows[0][k] === null).slice(0, 8);
+  return `<div class="tw"><table><thead><tr>${keys.map(k => `<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>` +
+    rows.map(r => '<tr>' + keys.map(k => `<td>${fmtCell(k, r[k])}</td>`).join('') + '</tr>').join('') +
+    '</tbody></table></div>';
+}
+
+function pickChart(rows) {
+  if (!rows || rows.length < 2) return null;
+  const keys = Object.keys(rows[0]);
+  const label = keys.find(k => typeof rows[0][k] === 'string' || ['year', 'month', 'quarter'].includes(k));
+  const metric = ['total_amount_usd', 'deals_count', 'total_amount_uzs', 'avg_amount_usd', 'total_quantity']
+    .find(k => keys.includes(k));
+  if (!label || !metric) return null;
+  return {label, metric};
+}
+
+function sourcesHtml(sources) {
+  const usable = (sources || []).filter(s => s.rows && s.rows.length);
+  if (!usable.length) return {html: '', charts: []};
+  const charts = [];
+  let inner = '';
+  usable.forEach((s, idx) => {
+    const pick = pickChart(s.rows);
+    let chartHtml = '';
+    if (pick && charts.length < 1) {
+      const id = 'mc' + (++chatCharts);
+      charts.push({id, rows: s.rows, ...pick});
+      chartHtml = `<div class="mini-chart"><canvas id="${id}"></canvas></div>`;
+    }
+    inner += `<div style="margin-bottom:10px">${chartHtml}${sourceTable(s.rows)}</div>`;
+  });
+  const html = `<details class="src"${charts.length ? ' open' : ''}><summary>📊 Ma'lumot manbasi va grafik (${usable.length})</summary><div class="inner">${inner}</div></details>`;
+  return {html, charts};
+}
+
+function drawChatChart(c) {
+  const isTime = ['year', 'month', 'quarter'].includes(c.label);
+  const rows = [...c.rows];
+  if (isTime) rows.sort((a, b) => a[c.label] - b[c.label]);
+  const usd = /usd/.test(c.metric);
+  const div = usd ? 1e6 : 1;
+  new Chart(document.getElementById(c.id), {
+    type: isTime ? 'line' : 'bar',
+    data: {
+      labels: rows.map(r => isTime && c.label === 'month' ? (MONTHS[r.month - 1] || r.month) : String(r[c.label]).slice(0, 26)),
+      datasets: [{label: c.metric + (usd ? ' (mln $)' : ''), data: rows.map(r => +(r[c.metric] / div).toFixed(2)),
+        backgroundColor: isTime ? 'rgba(52,229,138,.2)' : PALETTE[0], borderColor: '#34e58a',
+        borderRadius: 6, fill: isTime, tension: .3}]
+    },
+    options: {maintainAspectRatio: false, indexAxis: isTime ? 'x' : 'y',
+      plugins: {legend: {display: false}}, scales: {x: {grid: {display: false}}, y: {grid: {display: false}}}}
+  });
+}
+
+function welcome() {
+  log.innerHTML = '';
+  addBot(`<p><b>Salom! 👋</b> Men birja bitimlari bo'yicha AI tahlilchiman.</p>
+    <p>Quyidagilarni so'rashingiz mumkin:</p>
+    <ul><li>Hudud, mahsulot, kompaniya, broker bo'yicha <b>reyting va statistika</b></li>
+    <li>Yillar va davrlarni <b>solishtirish</b> (o'sish / pasayish foizi)</li>
+    <li>Savdo hajmi <b>so'm va dollarda</b>, ulushlar, o'rtacha ko'rsatkichlar</li></ul>
+    <p>Chap tomondagi namunalardan birini bosing yoki o'z savolingizni yozing.</p>`);
+  history = [];
+}
+
+async function ask(question) {
+  const btn = $('#send');
+  addUser(question);
+  btn.disabled = true;
+  const wait = addBot('<div class="typing"><i></i><i></i><i></i></div><div class="status-line">Ma\'lumotlar tahlil qilinmoqda…</div>');
+  try {
+    const data = await api('/api/chat', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question, language: $('#lang').value, history: history.slice(-8)})
+    });
+    wait.remove();
+    const src = sourcesHtml(data.sources);
+    addBot(markdown(data.answer), src.html);
+    src.charts.forEach(drawChatChart);
+    history.push({role: 'user', text: question}, {role: 'bot', text: data.answer.slice(0, 3500)});
+  } catch (err) {
+    wait.remove();
+    addBot(`<span class="err">⚠️ ${esc(err.message || "Xatolik yuz berdi. Qayta urinib ko'ring.")}</span>`);
+  } finally {
+    btn.disabled = false; $('#q').focus(); scrollDown();
+  }
+}
+
+$('#chat-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const q = $('#q').value.trim();
+  if (q.length < 2 || $('#send').disabled) return;
+  $('#q').value = '';
+  ask(q);
+});
+$$('.chip').forEach(c => c.addEventListener('click', () => {
+  if ($('#send').disabled) return;
+  ask(c.textContent.trim());
+}));
+$('#clear').addEventListener('click', welcome);
+
+/* ============ start ============ */
+welcome();
+checkHealth();
+loadDashboard();
+</script>
+</body>
+</html>
